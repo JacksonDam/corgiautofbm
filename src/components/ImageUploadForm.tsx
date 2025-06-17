@@ -49,7 +49,7 @@ export default function ImageUploadForm() {
 
     try {
       setUploading(true)
-      const response = await fetch('http://localhost:5000/api/hello', {
+      const response = await fetch('/api/hello', {
         method: 'POST',
         body: formData,
       })
