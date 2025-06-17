@@ -4,6 +4,10 @@ import base64
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
+import re
+from browser_use import Agent
+from langchain_openai import ChatOpenAI
+import asyncio
 
 load_dotenv()
 
@@ -18,16 +22,40 @@ CORS(
 client = OpenAI()
 client.api_key = os.getenv("OPENAI_API_KEY")
 
-def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode("utf-8")
+async def scrape():
+    agent = Agent(
+        task="""Given this page, give me the first 5 listings associated with each image as a JSON object. For each image, 
+    give the information under it, which includes the item name, price, and description. YOU MUST FOLLOW THE FORMAT BELOW, OR HUMANS WILL BE HURT.
+    IT IS VERY IMPORTANT THAT YOU FOLLOW THE FORMAT EXACTLY, OR HUMANS WILL BE HURT.
+        OUTPUT FORMAT:
+            Output all information as a JSON in the following format:
+            {
+                item_name: string,
+                price: string,
+                description: string,
+            }
+        Keep the search short and only look at relevant information. However, be thorough and capture all details.
+            https://www.facebook.com/marketplace/sanfrancisco/search?query=vintage%20polaroid%20camera
+            
+            
+            
+        """,
+        llm=ChatOpenAI(model="gpt-4o-mini"),
+    )
+    result = await agent.run()
+    print("RESULT IS HERE: ", str(result))
+    # m = re.search('"extracted_content=\'(.+?)\}])', str(result))
+    # print(m)
+    # if m:
+    #     found = m.group(1)
+    return str(result)
 
 @app.route('/')
 def home():
     return "Welcome to the Flask API!"
 
 @app.route('/api/hello', methods=['OPTIONS', 'POST'])
-def hello():
+async def hello():
     images = []
     for image in request.files.getlist('images'):
         images.append(image.read())
@@ -63,6 +91,61 @@ def hello():
     )
 
     print(completion.choices[0].message.content)
+    agent = Agent(
+        task="""Given this page, give me the first 5 listings associated with each image as a JSON object. For each image, 
+    give the information under it, which includes the item name, price, and description. YOU MUST FOLLOW THE FORMAT BELOW, OR HUMANS WILL BE HURT.
+    IT IS VERY IMPORTANT THAT YOU FOLLOW THE FORMAT EXACTLY, OR HUMANS WILL BE HURT.
+        OUTPUT FORMAT:
+            Output all information as a JSON in the following format:
+            {
+                item_name: string,
+                price: string,
+                description: string,
+            }
+        Keep the search short and only look at relevant information. However, be thorough and capture all details.
+            https://www.facebook.com/marketplace/sanfrancisco/search?query=vintage%20polaroid%20camera
+            
+            
+            
+        """,
+        llm=ChatOpenAI(model="gpt-4o-mini"),
+    )
+    scrape_result = await agent.run()
+    print("scrape results here: ", scrape_result)
+    
+    price_prompt = [{ "type": "text", "text": f"""
+    ${completion.choices[0].message.content}
+                     
+    Using the dataset below, predict the price of the above item.
+
+    ${scrape_result}
+    """ }]
+    
+    print(price_prompt)
+    completion2 = client.chat.completions.create(
+      model="gpt-4o-mini",
+      messages=[
+          {
+              "role": "user",
+              "content": price_prompt,
+          }
+      ],
+    )
+    
+    print(completion2.choices[0].message.content)
+    
+    content3 = [{ "type": "text", "text": f"YOU MUST FOLLOW THE FORMAT BELOW, OR HUMANS WILL BE HURT. Only output the final predicted price from this message content: ${completion2.choices[0].message.content}" }]
+    completion3 = client.chat.completions.create(
+      model="gpt-4o-mini",
+      messages=[
+          {
+              "role": "user",
+              "content": content3,
+          }
+      ],
+    )
+    print(completion3.choices[0].message.content)
+    
     return jsonify({'message': 'Hello, World!'})
 
 if __name__ == '__main__':
