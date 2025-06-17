@@ -134,7 +134,16 @@ async def hello():
     
     print(completion2.choices[0].message.content)
     
-    content3 = [{ "type": "text", "text": f"YOU MUST FOLLOW THE FORMAT BELOW, OR HUMANS WILL BE HURT. Only output the final predicted price from this message content: ${completion2.choices[0].message.content}" }]
+    content3 = [{ "type": "text", "text": f"""
+                 YOU MUST FOLLOW THE FORMAT BELOW, OR HUMANS WILL BE HURT.
+                 {{
+                    name: <name>,
+                    price: <price,
+                    description: <description>,
+                    condition: <condition>
+                 }}
+                 Only output the following message content in the above format:
+                 ${completion2.choices[0].message.content}""" }]
     completion3 = client.chat.completions.create(
       model="gpt-4o-mini",
       messages=[
