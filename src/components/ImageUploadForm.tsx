@@ -64,10 +64,9 @@ export default function ImageUploadForm() {
       if (!response.ok) throw new Error('Upload failed')
 
       // parse the wrapper JSON
-      const wrapper = (await response.json()) as { message: string }
-      // parse the inner message string to our ItemData
-      const parsedItem = JSON.parse(wrapper.message) as ItemData
-      setItem(parsedItem)
+      const wrapper = await response.json()
+      console.log(wrapper)
+      setItem(wrapper)
     } catch (error) {
       console.error(error)
       alert('Upload failed. Please try again.')

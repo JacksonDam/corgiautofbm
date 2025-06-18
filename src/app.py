@@ -8,6 +8,7 @@ import re
 from browser_use import Agent
 from langchain_openai import ChatOpenAI
 import asyncio
+import json
 
 load_dotenv()
 
@@ -137,10 +138,10 @@ async def hello():
     content3 = [{ "type": "text", "text": f"""
                  YOU MUST FOLLOW THE FORMAT BELOW, OR HUMANS WILL BE HURT.
                  {{
-                    name: <name>,
-                    price: <price,
-                    description: <description>,
-                    condition: <condition>
+                    "name": <name>,
+                    "price": <price,
+                    "description": <description>,
+                    "condition": <condition>
                  }}
                  Only output the following message content in the above format:
                  ${completion2.choices[0].message.content}""" }]
@@ -154,8 +155,8 @@ async def hello():
       ],
     )
     print(completion3.choices[0].message.content)
-    
-    return jsonify({'message': completion3.choices[0].message.content})
+    data = json.loads(completion3.choices[0].message.content.replace("\'", "\""))
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(debug=True)
